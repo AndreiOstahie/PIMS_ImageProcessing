@@ -42,6 +42,7 @@ class ImageApp:
         # btn_sp = tk.Button(frame, text="S&P", command=self.apply_salt_and_pepper_noise)
         # btn_sp.grid(row=1, column=1, padx=10)
 
+
         # Noise options
         self.noise_type = tk.StringVar(self.root)
         self.noise_type.set("Add Noise")  # default value
@@ -50,10 +51,10 @@ class ImageApp:
 
         # Denoise options
         self.denoise_type = tk.StringVar(self.root)
-        self.denoise_type.set("Select Denoise Method")  # default value
+        self.denoise_type.set("Denoise Method")  # default value
         denoise_menu = tk.OptionMenu(frame, self.denoise_type, "Median Filter", "Gaussian Filter", "NLMD", "Bilateral Filter",
                                      command=self.apply_denoise)
-        denoise_menu.grid(row=1, column=10, columnspan=2, padx=10, pady=10)
+        denoise_menu.grid(row=1, column=2, columnspan=2, padx=10, pady=10)
 
         # Contrast slider
         self.contrast_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Contrast")
@@ -64,7 +65,7 @@ class ImageApp:
         # Brightness slider
         self.brightness_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Brightness")
         self.brightness_slider.set(1.0)  # Set the default brightness value to 1.0
-        self.brightness_slider.grid(row=2, column=5, columnspan=2, pady=10)
+        self.brightness_slider.grid(row=2, column=2, columnspan=2, pady=10)
         self.brightness_slider.bind("<ButtonRelease-1>", self.adjust_brightness)
 
         # Image display area
