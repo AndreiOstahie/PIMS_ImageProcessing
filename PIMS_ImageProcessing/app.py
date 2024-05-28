@@ -6,10 +6,24 @@ import cv2
 import bm3d
 import os
 
+
+GAUSSIAN_NOISE_STRENGTHS = [5, 10, 15, 20, 25]
+SP_NOISE_STRENGTHS = [0.01, 0.05, 0.075, 0.1, 0.125]
+SPECKLE_NOISE_STRENGTHS = [0.1, 0.2, 0.3, 0.4, 0.5]
+
+MEDIAN_DENOISE_STRENGTHS = [3, 5, 7, 11, 15]
+GAUSSIAN_DENOISE_STRENGTHS = [3, 5, 7, 11, 15]
+NLMD_DENOISE_STRENGTHS = [5, 10, 15, 25, 35]
+BILATERAL_DENOISE_STRENGTHS = [(7, 50), (9, 75), (11, 100), (15, 125), (19, 150)]
+
+
 class ImageApp:
     def __init__(self, root):
         self.root = root
         self.root.title('Image Processing App')
+
+        self.noise_strength = 1
+        self.denoise_strength = 1
 
         # Frame for buttons and slider
         frame = tk.Frame(self.root)
@@ -34,6 +48,18 @@ class ImageApp:
         btn_autocorrect_incl_noise.grid(row=0, column=4, padx=10)
 
 
+        # Contrast slider
+        self.contrast_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Contrast")
+        self.contrast_slider.set(1.0)  # Set the default contrast value to 1.0
+        self.contrast_slider.grid(row=0, column=5, columnspan=2, pady=10)
+        self.contrast_slider.bind("<ButtonRelease-1>", self.adjust_contrast)
+
+        # Brightness slider
+        self.brightness_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Brightness")
+        self.brightness_slider.set(1.0)  # Set the default brightness value to 1.0
+        self.brightness_slider.grid(row=0, column=10, columnspan=2, pady=10)
+        self.brightness_slider.bind("<ButtonRelease-1>", self.adjust_brightness)
+
 
         # Noise buttons
         # btn_gaussian = tk.Button(frame, text="Gaussian", command=self.apply_gaussian_noise)
@@ -47,26 +73,27 @@ class ImageApp:
         self.noise_type = tk.StringVar(self.root)
         self.noise_type.set("Add Noise")  # default value
         noise_menu = tk.OptionMenu(frame, self.noise_type, "Gaussian", "S&P", "Speckle", command=self.apply_noise)
-        noise_menu.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+        noise_menu.grid(row=1, column=0, columnspan=1, padx=10, pady=10)
+
+        # Slider for noise strength
+        self.noise_slider = tk.Scale(frame, from_=1, to=5, resolution=1, orient=tk.HORIZONTAL, label="Noise Strength")
+        self.noise_slider.set(1)  # Set the default noise strength to 1
+        self.noise_slider.grid(row=1, column=1, columnspan=1, pady=10)
+        self.noise_slider.bind("<ButtonRelease-1>", self.adjust_noise_strength)
 
         # Denoise options
         self.denoise_type = tk.StringVar(self.root)
         self.denoise_type.set("Denoise Method")  # default value
         denoise_menu = tk.OptionMenu(frame, self.denoise_type, "Median Filter", "Gaussian Filter", "NLMD", "Bilateral Filter",
                                      command=self.apply_denoise)
-        denoise_menu.grid(row=1, column=2, columnspan=2, padx=10, pady=10)
+        denoise_menu.grid(row=1, column=3, columnspan=1, padx=10, pady=10)
 
-        # Contrast slider
-        self.contrast_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Contrast")
-        self.contrast_slider.set(1.0)  # Set the default contrast value to 1.0
-        self.contrast_slider.grid(row=2, column=0, columnspan=2, pady=10)
-        self.contrast_slider.bind("<ButtonRelease-1>", self.adjust_contrast)
+        # Slider for denoising strength
+        self.denoise_slider = tk.Scale(frame, from_=1, to=5, resolution=1, orient=tk.HORIZONTAL, label="Denoise Strength")
+        self.denoise_slider.set(1)  # Set the default denoise strength to 1
+        self.denoise_slider.grid(row=1, column=4, columnspan=1, pady=10)
+        self.denoise_slider.bind("<ButtonRelease-1>", self.adjust_denoise_strength)
 
-        # Brightness slider
-        self.brightness_slider = tk.Scale(frame, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Adjust Brightness")
-        self.brightness_slider.set(1.0)  # Set the default brightness value to 1.0
-        self.brightness_slider.grid(row=2, column=2, columnspan=2, pady=10)
-        self.brightness_slider.bind("<ButtonRelease-1>", self.adjust_brightness)
 
         # Image display area
         self.img_label = tk.Label(root)
@@ -113,6 +140,12 @@ class ImageApp:
             enhancer = ImageEnhance.Brightness(self.base_image)
             self.image = enhancer.enhance(self.brightness_slider.get())
             self.display_image(self.image)
+
+    def adjust_noise_strength(self, event=None):
+        self.noise_strength = self.noise_slider.get()
+
+    def adjust_denoise_strength(self, event=None):
+        self.denoise_strength = self.denoise_slider.get()
 
     def display_image(self, img):
         img_tk = ImageTk.PhotoImage(img)
@@ -186,26 +219,19 @@ class ImageApp:
 
 
 
-    def apply_gaussian_noise(self):
-        if self.image:
-            self.image = self.add_gaussian_noise(self.image)
-            self.base_image = self.image.copy()  # Update the baseline image after applying noise
-            self.display_image(self.image)
 
-    def apply_salt_and_pepper_noise(self):
-        if self.image:
-            self.image = self.add_salt_and_pepper_noise(self.image)
-            self.base_image = self.image.copy()  # Update the baseline image after applying noise
-            self.display_image(self.image)
 
     def apply_noise(self, choice):
         if self.image:
             if choice == "Gaussian":
-                self.image = self.add_gaussian_noise(self.image)
+                strength = GAUSSIAN_NOISE_STRENGTHS[self.noise_strength - 1]
+                self.image = self.add_gaussian_noise(self.image, 0, strength)
             elif choice == "S&P":
-                self.image = self.add_salt_and_pepper_noise(self.image)
+                strength = SP_NOISE_STRENGTHS[self.noise_strength - 1]
+                self.image = self.add_salt_and_pepper_noise(self.image, strength, strength)
             elif choice == "Speckle":
-                self.image = self.add_speckle_noise(self.image)
+                strength = SPECKLE_NOISE_STRENGTHS[self.noise_strength - 1]
+                self.image = self.add_speckle_noise(self.image, strength)
 
             self.contrast_slider.set(1.0)  # Reset contrast slider value to 1.0
             self.brightness_slider.set(1.0)  # Reset brightness slider value to 1.0
@@ -215,13 +241,18 @@ class ImageApp:
     def apply_denoise(self, method):
         if self.image:
             if method == "Median Filter":
-                self.image = self.median_filter(self.image)
+                strength = MEDIAN_DENOISE_STRENGTHS[self.denoise_strength - 1]
+                self.image = self.median_filter(self.image, strength)
             elif method == "Gaussian Filter":
-                self.image = self.gaussian_filter(self.image)
+                strength = GAUSSIAN_DENOISE_STRENGTHS[self.denoise_strength - 1]
+                self.image = self.gaussian_filter(self.image, strength)
             elif method == "NLMD":
-                self.image = self.non_local_means_denoising(self.image)
+                strength = NLMD_DENOISE_STRENGTHS[self.denoise_strength - 1]
+                self.image = self.non_local_means_denoising(self.image, strength)
             elif method == "Bilateral Filter":
-                self.image = self.bilateral_filter_denoising(self.image)
+                diameter = BILATERAL_DENOISE_STRENGTHS[self.denoise_strength - 1][0]
+                sigma = BILATERAL_DENOISE_STRENGTHS[self.denoise_strength - 1][1]
+                self.image = self.bilateral_filter_denoising(self.image, diameter, sigma, sigma)
 
             self.contrast_slider.set(1.0)  # Reset contrast slider value to 1.0
             self.brightness_slider.set(1.0)  # Reset brightness slider value to 1.0
@@ -230,30 +261,8 @@ class ImageApp:
 
 
 
-    # def median_filter(self, image):
-    #     """ Apply median filter to denoise the image """
-    #     image_array = np.array(image)
-    #     denoised_array = cv2.medianBlur(image_array, 5)  # using a 5x5 kernel
-    #     denoised_image = Image.fromarray(denoised_array)
-    #     return denoised_image
-    #
-    # def gaussian_filter(self, image):
-    #     """ Apply Gaussian filter to denoise the image """
-    #     image_array = np.array(image)
-    #     denoised_array = cv2.GaussianBlur(image_array, (5, 5), 0)  # using a 5x5 kernel
-    #     denoised_image = Image.fromarray(denoised_array)
-    #     return denoised_image
-    #
-    # def non_local_means_denoising(self, image):
-    #     """ Apply Non-local Means denoising algorithm to an image """
-    #     image_array = np.array(image)
-    #     denoised_array = cv2.fastNlMeansDenoisingColored(image_array, None, 10, 10, 7, 21)
-    #     denoised_image = Image.fromarray(denoised_array)
-    #     return denoised_image
 
-
-
-    def median_filter(self, image):
+    def median_filter(self, image, ksize=5):
         """
         Apply median filter to denoise the image using OpenCV, properly handling RGB to BGR conversion.
 
@@ -270,7 +279,8 @@ class ImageApp:
         image_array_bgr = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
 
         # Apply the median filter
-        denoised_array_bgr = cv2.medianBlur(image_array_bgr, 5)  # using a 5x5 kernel
+        print(ksize)
+        denoised_array_bgr = cv2.medianBlur(image_array_bgr, ksize)
 
         # Convert the denoised image back from BGR to RGB
         denoised_array_rgb = cv2.cvtColor(denoised_array_bgr, cv2.COLOR_BGR2RGB)
@@ -280,7 +290,7 @@ class ImageApp:
 
         return denoised_image
 
-    def gaussian_filter(self, image):
+    def gaussian_filter(self, image, ksize=5):
         """
         Apply Gaussian filter to denoise the image using OpenCV, properly handling RGB to BGR conversion.
 
@@ -297,7 +307,7 @@ class ImageApp:
         image_array_bgr = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
 
         # Apply the Gaussian filter
-        denoised_array_bgr = cv2.GaussianBlur(image_array_bgr, (5, 5), 0)  # using a 5x5 kernel
+        denoised_array_bgr = cv2.GaussianBlur(image_array_bgr, (ksize, ksize), 0)
 
         # Convert the denoised image back from BGR to RGB
         denoised_array_rgb = cv2.cvtColor(denoised_array_bgr, cv2.COLOR_BGR2RGB)
@@ -307,7 +317,7 @@ class ImageApp:
 
         return denoised_image
 
-    def non_local_means_denoising(self, image):
+    def non_local_means_denoising(self, image, h):
         """
             Apply Non-local Means denoising algorithm to an image using OpenCV.
             This function assumes the input image is a PIL Image in RGB format.
@@ -325,7 +335,7 @@ class ImageApp:
         image_array_bgr = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
 
         # Apply the Non-local Means denoising algorithm
-        denoised_array_bgr = cv2.fastNlMeansDenoisingColored(image_array_bgr, None, 10, 10, 7, 21)
+        denoised_array_bgr = cv2.fastNlMeansDenoisingColored(image_array_bgr, None, h, h, 7, 21)
 
         # Convert the denoised image back from BGR to RGB
         denoised_array_rgb = cv2.cvtColor(denoised_array_bgr, cv2.COLOR_BGR2RGB)
@@ -366,44 +376,6 @@ class ImageApp:
 
         return denoised_image
 
-    def auto_correct_image_incl_noise(self):
-        # Convert image
-        image = None
-        if self.image:
-            image = self.image
-        image_array = np.array(image)
-
-        # Step 1: Analyze the image
-        mean_intensity = np.mean(image_array)
-        std_intensity = np.std(image_array)
-
-        # Noise level estimation (simplified using variance)
-        noise_estimate = np.var(image_array)
-
-        # Step 2: Apply corrections
-
-        # Denoising if noise is above a threshold
-        if noise_estimate > 500:  # Threshold is arbitrary; adjust based on your needs
-            # Assuming bm3d.bm3d returns a numpy array, ensure proper function or library import for bm3d
-            denoised_array = bm3d.bm3d(image_array, sigma_psd=noise_estimate / 255,
-                                       stage_arg=bm3d.BM3DStages.ALL_STAGES)
-            # Convert denoised array back to PIL Image for further processing
-            image = Image.fromarray(denoised_array.astype(np.uint8))
-
-        # Brightness adjustment
-        if mean_intensity < 128:  # Assuming the lower half is too dark
-            enhancer = ImageEnhance.Brightness(image)
-            image = enhancer.enhance(2 - mean_intensity / 128)
-
-        # Contrast adjustment
-        if std_intensity < 50:  # Arbitrary threshold for low contrast
-            enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(2)
-
-        self.display_image(image)
-
-        return image
-
 
 
 
@@ -442,7 +414,118 @@ class ImageApp:
 
         return image
 
+
+    def auto_correct_image_incl_noise(self):
+        # Convert image
+        image = None
+        if self.image:
+            image = self.image
+        image_array = np.array(image)
+
+        # Step 1: Analyze the image
+        mean_intensity = np.mean(image_array)
+        std_intensity = np.std(image_array)
+
+        # Noise level estimation (simplified using variance)
+        noise_estimate = np.var(image_array)
+
+        # Step 2: Apply corrections
+
+        # Denoising if noise is above a threshold
+        if noise_estimate > 500:  # Threshold is arbitrary; adjust based on your needs
+            # Assuming bm3d.bm3d returns a numpy array, ensure proper function or library import for bm3d
+            denoised_array = bm3d.bm3d(image_array, sigma_psd=noise_estimate / 255,
+                                       stage_arg=bm3d.BM3DStages.ALL_STAGES)
+            # Convert denoised array back to PIL Image for further processing
+            image = Image.fromarray(denoised_array.astype(np.uint8))
+
+        # Brightness adjustment
+        if mean_intensity < 128:  # Assuming the lower half is too dark
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(2 - mean_intensity / 128)
+
+        # Contrast adjustment
+        if std_intensity < 50:  # Arbitrary threshold for low contrast
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(2)
+
+        self.display_image(image)
+
+        return image
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = ImageApp(root)
     root.mainloop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+# def apply_gaussian_noise(self):
+#     if self.image:
+#         self.image = self.add_gaussian_noise(self.image)
+#         self.base_image = self.image.copy()  # Update the baseline image after applying noise
+#         self.display_image(self.image)
+#
+# def apply_salt_and_pepper_noise(self):
+#     if self.image:
+#         self.image = self.add_salt_and_pepper_noise(self.image)
+#         self.base_image = self.image.copy()  # Update the baseline image after applying noise
+#         self.display_image(self.image)
+
+
+
+
+# def median_filter(self, image):
+#     """ Apply median filter to denoise the image """
+#     image_array = np.array(image)
+#     denoised_array = cv2.medianBlur(image_array, 5)  # using a 5x5 kernel
+#     denoised_image = Image.fromarray(denoised_array)
+#     return denoised_image
+#
+# def gaussian_filter(self, image):
+#     """ Apply Gaussian filter to denoise the image """
+#     image_array = np.array(image)
+#     denoised_array = cv2.GaussianBlur(image_array, (5, 5), 0)  # using a 5x5 kernel
+#     denoised_image = Image.fromarray(denoised_array)
+#     return denoised_image
+#
+# def non_local_means_denoising(self, image):
+#     """ Apply Non-local Means denoising algorithm to an image """
+#     image_array = np.array(image)
+#     denoised_array = cv2.fastNlMeansDenoisingColored(image_array, None, 10, 10, 7, 21)
+#     denoised_image = Image.fromarray(denoised_array)
+#     return denoised_image
+
