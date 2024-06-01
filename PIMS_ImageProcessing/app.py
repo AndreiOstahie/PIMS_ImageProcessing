@@ -6,7 +6,8 @@ import cv2
 import bm3d
 import os
 from noise import add_gaussian_noise, add_salt_and_pepper_noise, add_speckle_noise
-from denoise import gaussian_filter, median_filter, median_filter2, non_local_means_denoising, bilateral_filter_denoising
+from denoise import median_filter, gaussian_filter, non_local_means, bilateral_filter
+from denoise import median_filter_2, gaussian_filter_2, non_local_means_2, bilateral_filter_2
 
 
 # Noise and denoise strength
@@ -89,6 +90,15 @@ class ImageApp:
         self.denoise_slider.grid(row=1, column=4, columnspan=1, pady=10)
         self.denoise_slider.bind("<ButtonRelease-1>", self.adjust_denoise_strength)
 
+        # Checkbox to toggle between pre-built and custom denoising methods
+        # False - use prebuilt functions from libraries (e.g. OpenCV)
+        # True - use custom functions
+        self.use_custom_denoise = tk.BooleanVar()
+        self.use_custom_denoise.set(False)  # Default value: unchecked, False
+        check_custom_denoise = tk.Checkbutton(frame, text="Use Custom Denoise", variable=self.use_custom_denoise,
+                                              onvalue=True, offvalue=False)
+        check_custom_denoise.grid(row=1, column=5, columnspan=1, padx=10)
+
         # Image display area
         self.img_label = tk.Label(root)
         self.img_label.pack(pady=20)
@@ -169,17 +179,29 @@ class ImageApp:
         if self.image:
             if method == "Median Filter":
                 strength = MEDIAN_DENOISE_STRENGTHS[self.denoise_strength - 1]
-                self.image = median_filter(self.image, strength)
+                if self.use_custom_denoise.get():
+                    self.image = median_filter_2(self.image, strength)
+                else:
+                    self.image = median_filter(self.image, strength)
             elif method == "Gaussian Filter":
                 strength = GAUSSIAN_DENOISE_STRENGTHS[self.denoise_strength - 1]
-                self.image = gaussian_filter(self.image, strength)
+                if self.use_custom_denoise.get():
+                    self.image = gaussian_filter_2(self.image, strength)
+                else:
+                    self.image = gaussian_filter(self.image, strength)
             elif method == "NLMD":
                 strength = NLMD_DENOISE_STRENGTHS[self.denoise_strength - 1]
-                self.image = non_local_means_denoising(self.image, strength)
+                if self.use_custom_denoise.get():
+                    self.image = non_local_means_2(self.image, strength)
+                else:
+                    self.image = non_local_means(self.image, strength)
             elif method == "Bilateral Filter":
                 diameter = BILATERAL_DENOISE_STRENGTHS[self.denoise_strength - 1][0]
                 sigma = BILATERAL_DENOISE_STRENGTHS[self.denoise_strength - 1][1]
-                self.image = bilateral_filter_denoising(self.image, diameter, sigma, sigma)
+                if self.use_custom_denoise.get():
+                    self.image = bilateral_filter_2(self.image, diameter, sigma, sigma)
+                else:
+                    self.image = bilateral_filter(self.image, diameter, sigma, sigma)
 
             self.contrast_slider.set(1.0)  # Reset contrast slider value to 1.0
             self.brightness_slider.set(1.0)  # Reset brightness slider value to 1.0
