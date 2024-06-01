@@ -8,8 +8,6 @@ import os
 from noise import add_gaussian_noise, add_salt_and_pepper_noise, add_speckle_noise
 from denoise import gaussian_filter, median_filter, median_filter2, non_local_means_denoising, bilateral_filter_denoising
 
-Changes
-
 # Noise and denoise strength
 GAUSSIAN_NOISE_STRENGTHS = [5, 10, 15, 20, 25]
 SP_NOISE_STRENGTHS = [0.01, 0.05, 0.075, 0.1, 0.125]
