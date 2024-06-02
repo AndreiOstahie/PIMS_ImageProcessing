@@ -1,6 +1,6 @@
 from PIL import Image
 import numpy as np
-
+import cv2
 
 
 def add_gaussian_noise(image, mean=0, std=25):
@@ -25,7 +25,7 @@ def add_gaussian_noise(image, mean=0, std=25):
     noisy_image_array = np.clip(noisy_image_array, 0, 255)
 
     # Convert numpy array back to PIL image
-    noisy_image = Image.fromarray(np.uint8(noisy_image_array))
+    noisy_image = Image.fromarray(noisy_image_array.astype('uint8'))
 
     return noisy_image
 
@@ -56,6 +56,7 @@ def add_salt_and_pepper_noise(image, salt_prob=0.01, pepper_prob=0.01):
     noisy_image = Image.fromarray(image_array)
 
     return noisy_image
+
 
 def add_speckle_noise(image, amount=0.5):
     """

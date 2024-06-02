@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk, ImageEnhance
 import numpy as np
 import cv2
@@ -16,7 +16,7 @@ SP_NOISE_STRENGTHS = [0.01, 0.05, 0.075, 0.1, 0.125]
 SPECKLE_NOISE_STRENGTHS = [0.1, 0.2, 0.3, 0.4, 0.5]
 
 MEDIAN_DENOISE_STRENGTHS = [3, 5, 7, 11, 15]
-GAUSSIAN_DENOISE_STRENGTHS = [3, 5, 7, 11, 15]
+GAUSSIAN_DENOISE_STRENGTHS = [5, 7, 11, 15, 19]
 NLMD_DENOISE_STRENGTHS = [5, 10, 15, 25, 35]
 BILATERAL_DENOISE_STRENGTHS = [(7, 50), (9, 75), (11, 100), (15, 125), (19, 150)]
 
@@ -112,6 +112,11 @@ class ImageApp:
         path = filedialog.askopenfilename()
         if path:
             self.original_image = Image.open(path)
+
+            # Check if image is grayscale
+            is_grayscale = messagebox.askyesno("Grayscale Image", "Is the loaded image grayscale?")
+            if is_grayscale:
+                self.original_image = self.original_image.convert('L')
             self.base_image = self.original_image.copy()  # Create base image
             self.image = self.original_image.copy()  # Create a copy for modifications
             self.display_image(self.image)
